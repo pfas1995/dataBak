@@ -1,7 +1,5 @@
 package com.adc.mq.controller;
 
-import com.adc.mq.dao.TestRepository;
-import com.adc.mq.entity.Test;
 import com.adc.mq.service.ProductService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,13 +15,11 @@ public class MainController {
     @Autowired
     private ProductService productService;
 
-    @Autowired
-    private TestRepository testRepository;
 
     @GetMapping("/send")
     public void send() {
-        Test t = Test.Factory(1L, "test");
-        testRepository.save(t);
+//        Test t = Test.Factory(1L, "test");
+//        testRepository.save(t);
         productService.send("hello");
     }
 

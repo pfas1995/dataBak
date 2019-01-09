@@ -2,6 +2,8 @@ package com.adc.mq.listener;
 
 
 import com.adc.mq.config.RabbitConfig;
+import com.adc.mq.entity.SyncMessage;
+import com.google.gson.Gson;
 import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +22,11 @@ public class MessageListener {
     public void receieveMessage(Message message, Channel channel) throws IOException {
         byte[] bytes = message.getBody();
         logger.info("接收消息: " + new String(bytes));
-        channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
+
+        Gson gson = new Gson();
+        SyncMessage syncMessage = gson.fromJson(new String(bytes), SyncMessage.class);
+        logger.info(syncMessage.toString());
+        channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
     }
 
 
