@@ -8,6 +8,7 @@ public class SyncMessage {
     private String opType;
     private String tableName;
     private Long timestamp;
+    private Map<String, Object> pk;
     private Map<String, Object> data;
 
     public SyncMessage(String dbName, String opType, String tableName, Long timestamp, Map data) {
@@ -56,6 +57,14 @@ public class SyncMessage {
 
     public void setData(Map<String, Object> data) {
         this.data = data;
+    }
+
+    public Map<String, Object> getPk() {
+        return pk;
+    }
+
+    public void setPk(Map<String, Object> pk) {
+        this.pk = pk;
     }
 
     @Override
