@@ -24,7 +24,7 @@ public class MessageListener {
     }
 
 
-    @RabbitListener(queues = {RabbitConfig.QUEUE_R})
+    @RabbitListener(queues = {RabbitConfig.QUEUE_D})
     public void receieveMessageR(Message message, Channel channel) throws IOException {
         byte[] bytes = message.getBody();
         logger.info("从死信队列接收消息: " + new String(bytes));
