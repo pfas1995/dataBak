@@ -4,17 +4,57 @@ import java.util.Map;
 
 public class SyncMessage {
 
-    public String dbName;
-    public String opType;
-    public String tableName;
-    public Long timestamp;
-    public Map<String, Object> data;
+    private String dbName;
+    private String opType;
+    private String tableName;
+    private Long timestamp;
+    private Map<String, Object> data;
 
     public SyncMessage(String dbName, String opType, String tableName, Long timestamp, Map data) {
         this.dbName = dbName;
         this.opType = opType;
         this.tableName = tableName;
         this.timestamp = timestamp;
+        this.data = data;
+    }
+
+    public String getDbName() {
+        return dbName;
+    }
+
+    public void setDbName(String dbName) {
+        this.dbName = dbName;
+    }
+
+    public String getOpType() {
+        return opType;
+    }
+
+    public void setOpType(String opType) {
+        this.opType = opType;
+    }
+
+    public String getTableName() {
+        return tableName;
+    }
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
+    }
+
+    public Long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public Map<String, Object> getData() {
+        return data;
+    }
+
+    public void setData(Map<String, Object> data) {
         this.data = data;
     }
 

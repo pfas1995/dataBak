@@ -21,11 +21,10 @@ public class MessageListener {
     @RabbitListener(queues = {RabbitConfig.QUEUE_A})
     public void receieveMessage(Message message, Channel channel) throws IOException {
         byte[] bytes = message.getBody();
-        logger.info("接收消息: " + new String(bytes));
 
         Gson gson = new Gson();
         SyncMessage syncMessage = gson.fromJson(new String(bytes), SyncMessage.class);
-        logger.info(syncMessage.toString());
+        // channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
         channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
     }
 
