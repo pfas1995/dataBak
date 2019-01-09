@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -111,6 +112,28 @@ public class DBoptServiceImpl implements DBoptService {
     public List<Integer> processMessage(List<SyncMessage> syncMessages) {
         int messageIndex = 0;
         List<Integer>  failIndexs = new ArrayList<>();
+        Connection connection = null;
+        try{
+            connection =jdbcTemplate.getDataSource().getConnection();
+            connection.setAutoCommit(false);
+
+
+
+        }
+        catch (Exception e) {
+            String error = e.getMessage();
+            logger.error(error);
+            try{
+                connection.rollback();
+                connection.setAutoCommit(true);
+                connection.close();
+            }
+            catch (SQLException e1) {
+
+            }
+
+        }
+
         for(SyncMessage syncMessage:syncMessages) {
 
             if(!syncData(syncMessage)) {
