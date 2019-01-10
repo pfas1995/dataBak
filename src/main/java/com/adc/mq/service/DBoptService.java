@@ -1,3 +1,4 @@
+
 package com.adc.mq.service;
 
 import com.adc.mq.entity.SyncMessage;
