@@ -21,10 +21,10 @@ import java.util.List;
 public class MessageListener {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageListener.class);
+    private int fireNumber = 0;
 
     @Autowired
     private DBoptService dBoptService;
-
 
     /**
      * 消息队列监听器
@@ -42,8 +42,11 @@ public class MessageListener {
         try{
             dBoptService.processMessage(syncMessages);
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+//            fireNumber++;
+//            System.out.println(fireNumber + "," + System.currentTimeMillis());
         }
         catch (Exception e) {
+            //Todo 错误处理
             logger.error(e.getMessage());
             channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
         }

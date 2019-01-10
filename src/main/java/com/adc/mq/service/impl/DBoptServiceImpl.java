@@ -30,9 +30,8 @@ public class DBoptServiceImpl implements DBoptService {
     public static final String OPT_ADD = "add";
     public static final String OPT_UPDATE = "update";
     public static final String OPT_DEL = "del";
-    public static final String TIME_STAMP = "timeStamp";
+    public static final String TIME_STAMP = "time";
 
-    private Connection ct;
 
 
     /**
@@ -112,7 +111,11 @@ public class DBoptServiceImpl implements DBoptService {
                 String set = "";
                 String condition = "";
                 for(String key : data.keySet()) {
+                    if (pk.containsKey(key)) {
+                        continue;
+                    }
                     set = set + key + "=" + convertValue(data.get(key)) + ",";
+
                 }
                 set = set.substring(0, set.length()-1);
                 for(String key : pk.keySet()) {
@@ -164,15 +167,6 @@ public class DBoptServiceImpl implements DBoptService {
         data.put(TIME_STAMP, syncMessage.getTimestamp());
 
         String opt = syncMessage.getOpType();
-        try{
-            Boolean cta = ct.getAutoCommit();
-            Boolean b = jdbcTemplate.getDataSource().getConnection().getAutoCommit();
-            logger.info(cta + " " + b);
-        }
-        catch (Exception e) {
-
-        }
-
 
         String sql = MessageToSql(opt, syncMessage.getTableName(), syncMessage.getPk(), data);
         logger.info(sql);
