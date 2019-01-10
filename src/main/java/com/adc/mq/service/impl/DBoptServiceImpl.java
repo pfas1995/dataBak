@@ -7,14 +7,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Component;
 
+import javax.transaction.Transactional;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Component
 public class DBoptServiceImpl implements DBoptService {
 
     private static final Logger logger = LoggerFactory.getLogger(DBoptServiceImpl.class);
@@ -22,10 +24,15 @@ public class DBoptServiceImpl implements DBoptService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private static final String OPT_ADD = "add";
-    private static final String OPT_UPDATE = "update";
-    private static final String OPT_DEL = "del";
-    private static final String TIME_STAMP = "timeStamp";
+//    @Autowired
+//    private TransactionTemplate transactionTemplate;
+
+    public static final String OPT_ADD = "add";
+    public static final String OPT_UPDATE = "update";
+    public static final String OPT_DEL = "del";
+    public static final String TIME_STAMP = "timeStamp";
+
+    private Connection ct;
 
 
     /**
@@ -42,7 +49,7 @@ public class DBoptServiceImpl implements DBoptService {
             condition = condition + key + "=" + pk.get(key) + " and";
         }
         condition = condition.substring(0, condition.length()-4);
-        sql = String.format(sql, condition);
+        sql = String.format(sql, tableName, condition);
         List<Long> recodeTimeStamps = jdbcTemplate.query(sql, new RowMapper<Long>() {
             @Override
             public Long mapRow(ResultSet resultSet, int i) throws SQLException {
@@ -50,11 +57,30 @@ public class DBoptServiceImpl implements DBoptService {
                 return timeStamp;
             }
         });
+        if (recodeTimeStamps == null || recodeTimeStamps.isEmpty()) {
+            return false;
+        }
+
         Long recodeTimeStamp = recodeTimeStamps.get(0);
-        if (recodeTimeStamp < timeStamp) {
+        if (recodeTimeStamp > timeStamp) {
             return false;
         }
         return true;
+    }
+
+
+    /**
+     * 依据对象类型转化成相应的 sql 语句中的语法
+     * @param o
+     * @return
+     */
+    private Object convertValue(Object o) {
+        if(o instanceof String) {
+            return "'" + o + "'";
+        }
+        else {
+            return o;
+        }
     }
 
     /**
@@ -66,7 +92,7 @@ public class DBoptServiceImpl implements DBoptService {
      * @return
      */
     private String MessageToSql(String opt, String tableName, Map<String, Object> pk, Map<String, Object> data) {
-        String insertSql = "INSERT INTO %s(%s) VALUES (%s)";
+        String insertSql = "INSERT INTO %s (%s) VALUES (%s)";
         String updateSql = "UPDATE %s SET %s WHERE %s";
         String delSql = "DELETE FROM %s WHERE %s";
         String sql = "";
@@ -76,7 +102,7 @@ public class DBoptServiceImpl implements DBoptService {
                 String values = "";
                 for(String key : data.keySet()) {
                     keys = keys + key + ",";
-                    values = values + data.get(key)  + ",";
+                    values = values + convertValue(data.get(key))  + ",";
                 }
                 keys = keys.substring(0, keys.length()-1);
                 values = values.substring(0, values.length()-1);
@@ -86,11 +112,11 @@ public class DBoptServiceImpl implements DBoptService {
                 String set = "";
                 String condition = "";
                 for(String key : data.keySet()) {
-                    set = set + key + "=" + data.get(key) + ",";
+                    set = set + key + "=" + convertValue(data.get(key)) + ",";
                 }
                 set = set.substring(0, set.length()-1);
                 for(String key : pk.keySet()) {
-                    condition = condition + key + "=" + pk.get(key) + " and";
+                    condition = condition + key + "=" + convertValue(pk.get(key)) + " and";
                 }
                 condition = condition.substring(0, condition.length()-4);
                 sql = String.format(updateSql, tableName, set, condition);
@@ -98,90 +124,76 @@ public class DBoptServiceImpl implements DBoptService {
             case OPT_DEL:
                 condition = "";
                 for(String key : pk.keySet()) {
-                    condition = condition + key + "=" + pk.get(key) + " and";
+                    condition = condition + key + "=" + convertValue(pk.get(key)) + " and";
                 }
                 condition = condition.substring(0, condition.length()-4);
-                sql = String.format(delSql, condition);
+                sql = String.format(delSql, tableName, condition);
                 break;
         }
         return sql;
     }
 
 
+    /**
+     * 处理消息
+     * @param syncMessages
+     * @return
+     */
     @Override
-    public List<Integer> processMessage(List<SyncMessage> syncMessages) {
-        int messageIndex = 0;
-        List<Integer>  failIndexs = new ArrayList<>();
-        Connection connection = null;
-        try{
-            connection =jdbcTemplate.getDataSource().getConnection();
-            connection.setAutoCommit(false);
-
-
-
-        }
-        catch (Exception e) {
-            String error = e.getMessage();
-            logger.error(error);
-            try{
-                connection.rollback();
-                connection.setAutoCommit(true);
-                connection.close();
-            }
-            catch (SQLException e1) {
-
-            }
-
+    @Transactional
+    public void processMessage(List<SyncMessage> syncMessages) {
+        logger.info(syncMessages.toString());
+        for(SyncMessage syncMessage : syncMessages) {
+            this.syncData(syncMessage);
         }
 
-        for(SyncMessage syncMessage:syncMessages) {
-
-            if(!syncData(syncMessage)) {
-                failIndexs.add(messageIndex);
-            }
-            messageIndex++;
-        }
-        return failIndexs;
 
     }
 
     /**
-     *
+     * 同步消息中的一条数据
      * @param syncMessage
      * @return
      */
     @Override
-    public Boolean syncData(SyncMessage syncMessage) {
+    public Boolean syncData(SyncMessage syncMessage)  {
+        Boolean success = false;
         String dataSource = syncMessage.getDbName();
         //Todo 切换数据源
+        Map<String, Object> data = syncMessage.getData();
+        data.put(TIME_STAMP, syncMessage.getTimestamp());
 
         String opt = syncMessage.getOpType();
-        String sql = MessageToSql(opt, syncMessage.getTableName(), null, syncMessage.getData());
+        try{
+            Boolean cta = ct.getAutoCommit();
+            Boolean b = jdbcTemplate.getDataSource().getConnection().getAutoCommit();
+            logger.info(cta + " " + b);
+        }
+        catch (Exception e) {
 
-        switch (opt) {
-            case OPT_ADD:
-            case OPT_DEL:
-                try {
+        }
+
+
+        String sql = MessageToSql(opt, syncMessage.getTableName(), syncMessage.getPk(), data);
+        logger.info(sql);
+        try {
+            switch (opt) {
+                case OPT_ADD:
+                case OPT_DEL:
                     jdbcTemplate.update(sql);
-                }
-                catch (Exception e) {
-                    logger.error(e.getMessage());
-                    return false;
-                }
-
-                break;
-            case OPT_UPDATE:
-                Boolean valid = checkValid(syncMessage.getTableName(), syncMessage.getPk(), syncMessage.getTimestamp());
-                if(valid) {
-                    try {
+                    break;
+                case OPT_UPDATE:
+                    Boolean valid = checkValid(syncMessage.getTableName(), syncMessage.getPk(), syncMessage.getTimestamp());
+                    if(valid) {
                         jdbcTemplate.update(sql);
                     }
-                    catch (Exception e) {
-                        logger.error(e.getMessage());
-                        return false;
-                    }
-                }
+            }
+            success = true;
         }
-        return true;
+        catch (Exception e) {
+            success = false;
+            throw e;
+        }
+        return success;
     }
 }

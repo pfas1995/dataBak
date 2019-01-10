@@ -11,12 +11,23 @@ public class SyncMessage {
     private Map<String, Object> pk;
     private Map<String, Object> data;
 
-    public SyncMessage(String dbName, String opType, String tableName, Long timestamp, Map data) {
-        this.dbName = dbName;
-        this.opType = opType;
-        this.tableName = tableName;
-        this.timestamp = timestamp;
-        this.data = data;
+//    public SyncMessage(String dbName, String opType, String tableName, Long timestamp, Map data) {
+//        this.dbName = dbName;
+//        this.opType = opType;
+//        this.tableName = tableName;
+//        this.timestamp = timestamp;
+//        this.data = data;
+//    }
+
+    public static SyncMessage SyncMessageFactory(String dbName, String opType, String tableName, Long timestamp, Map pk, Map data) {
+        SyncMessage syncMessage = new SyncMessage();
+        syncMessage.dbName = dbName;
+        syncMessage.opType = opType;
+        syncMessage.tableName = tableName;
+        syncMessage.timestamp = timestamp;
+        syncMessage.pk = pk;
+        syncMessage.data = data;
+        return syncMessage;
     }
 
     public String getDbName() {

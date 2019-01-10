@@ -25,17 +25,28 @@ public class MessageListener {
     @Autowired
     private DBoptService dBoptService;
 
+
+    /**
+     * 消息队列监听器
+     * 监听消息，并把入库
+     * @param message
+     * @param channel
+     * @throws IOException
+     */
     @RabbitListener(queues = {RabbitConfig.QUEUE_A})
     public void receieveMessage(Message message, Channel channel) throws IOException {
         byte[] bytes = message.getBody();
 
         Gson gson = new Gson();
-//        SyncMessage syncMessage = gson.fromJson(new String(bytes), SyncMessage.class);
         List<SyncMessage> syncMessages =  gson.fromJson(new String(bytes), new TypeToken<List<SyncMessage>>(){}.getType());
-        //dBoptService.processMessage();
-
-        // channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
-        channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+        try{
+            dBoptService.processMessage(syncMessages);
+            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+        }
+        catch (Exception e) {
+            logger.error(e.getMessage());
+            channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
+        }
     }
 
 
